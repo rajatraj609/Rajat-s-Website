@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { usePortfolio } from '../context/PortfolioContext';
-import { Lock, User, Calendar, Phone, Mail, Save, LogOut, ArrowLeft, CheckCircle, Download, MapPin, Globe, Linkedin, Twitter, Github, Image as ImageIcon } from 'lucide-react';
+import { Lock, User, Calendar, Phone, Mail, Save, LogOut, ArrowLeft, CheckCircle, Download, MapPin, Globe, Linkedin, Twitter, Github, Image as ImageIcon, AlertTriangle } from 'lucide-react';
 import { Experience, Certification, Skill, Education, ResumeBookData, ContactInfo, HireStatus } from '../types';
 import { getDirectImageUrl } from '../utils/imageUtils';
-import { Plus, Trash2, Award, AlertTriangle } from 'lucide-react';
-import { isSupabaseConfigured } from '../lib/supabase';
+import { Plus, Trash2, Award } from 'lucide-react';
+import { isFirebaseConfigured } from '../lib/firebase';
 
 // Verification Constants
 const VERIFY_EMAIL = "pushpraj2502@gmail.com";
@@ -29,7 +29,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     skills, updateSkills,
     resumeBookData, updateResumeBookData,
     contactInfo, updateContactInfo,
-    saveToSupabase
+    saveToFirebase
   } = usePortfolio();
   
   const [viewState, setViewState] = useState<ViewState>('verify');
@@ -134,7 +134,9 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       updateResumeBookData(localResumeBookData);
       updateContactInfo(localContactInfo);
       
-      await saveToSupabase();
+      if (isFirebaseConfigured) {
+        await saveToFirebase();
+      }
       
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus('idle'), 2000);
@@ -203,10 +205,10 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
         <div className="flex flex-col">
           <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
-          {!isSupabaseConfigured && (
+          {!isFirebaseConfigured && (
             <div className="flex items-center gap-2 text-amber-500 text-xs mt-1 font-medium">
               <AlertTriangle className="w-3 h-3" />
-              Supabase not configured. Changes will only save locally.
+              Firebase not configured. Changes will only save locally.
             </div>
           )}
         </div>

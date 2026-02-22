@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ABOUT_ME, DETAILED_BIO, EXPERIENCES, CERTIFICATIONS, SKILLS, EDUCATION, RESUME_BOOK_DATA, CONTACT_INFO, HIRE_STATUS } from '../constants';
 import { Experience, Certification, Skill, Education, ResumeBookData, ContactInfo, HireStatus } from '../types';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { db, isFirebaseConfigured } from '../lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 interface PortfolioContextType {
   aboutMe: string; // Hero headline
@@ -24,7 +25,7 @@ interface PortfolioContextType {
   updateResumeBookData: (data: ResumeBookData) => void;
   contactInfo: ContactInfo;
   updateContactInfo: (data: ContactInfo) => void;
-  saveToSupabase: () => Promise<void>;
+  saveToFirebase: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -32,7 +33,6 @@ const PortfolioContext = createContext<PortfolioContextType | undefined>(undefin
 
 export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
-  const [supabaseError, setSupabaseError] = useState<string | null>(null);
   // Initialize from localStorage or fallback to constants
   const [aboutMe, setAboutMe] = useState(ABOUT_ME);
   const [heroImage, setHeroImage] = useState('https://drive.google.com/file/d/11nYPAIjYeAAKT6xupCNPyK1S3j5C7jFJ/view?usp=sharing');
@@ -45,29 +45,22 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [resumeBookData, setResumeBookData] = useState<ResumeBookData>(RESUME_BOOK_DATA);
   const [contactInfo, setContactInfo] = useState<ContactInfo>(CONTACT_INFO);
 
-  // Fetch from Supabase on mount
+  // Load from Firebase/localStorage on mount
   useEffect(() => {
     const fetchData = async () => {
-      if (!isSupabaseConfigured) {
-        console.warn('Supabase not configured, skipping fetch.');
+      if (!isFirebaseConfigured) {
+        console.warn('Firebase not configured, skipping fetch.');
         loadFromLocalStorage();
         setIsLoading(false);
         return;
       }
 
       try {
-        const { data, error } = await supabase
-          .from('portfolio_data')
-          .select('content')
-          .eq('id', 1)
-          .single();
+        const docRef = doc(db, "resumeData", "portfolio");
+        const docSnap = await getDoc(docRef);
 
-        if (error) {
-          console.warn('Supabase fetch error:', error.message);
-          setSupabaseError(error.message);
-          loadFromLocalStorage();
-        } else if (data && data.content) {
-          const c = data.content;
+        if (docSnap.exists()) {
+          const c = docSnap.data();
           if (c.aboutMe) setAboutMe(c.aboutMe);
           if (c.heroImage) setHeroImage(c.heroImage);
           if (c.hireStatus) setHireStatus(c.hireStatus);
@@ -78,9 +71,12 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
           if (c.skills) setSkills(c.skills);
           if (c.resumeBookData) setResumeBookData(c.resumeBookData);
           if (c.contactInfo) setContactInfo(c.contactInfo);
+        } else {
+          console.warn('No such document in Firestore!');
+          loadFromLocalStorage();
         }
       } catch (err) {
-        console.error('Error fetching from Supabase:', err);
+        console.error('Error fetching from Firebase:', err);
         loadFromLocalStorage();
       } finally {
         setIsLoading(false);
@@ -125,9 +121,9 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
   useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_resume_book', JSON.stringify(resumeBookData)); }, [resumeBookData, isLoading]);
   useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_contact_info', JSON.stringify(contactInfo)); }, [contactInfo, isLoading]);
 
-  const saveToSupabase = async () => {
-    if (!isSupabaseConfigured) {
-      throw new Error('Supabase is not configured. Please set your environment variables.');
+  const saveToFirebase = async () => {
+    if (!isFirebaseConfigured) {
+      throw new Error('Firebase is not configured. Please set your environment variables.');
     }
 
     const content = {
@@ -140,15 +136,14 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
       certifications,
       skills,
       resumeBookData,
-      contactInfo
+      contactInfo,
+      updatedAt: new Date().toISOString()
     };
 
-    const { error } = await supabase
-      .from('portfolio_data')
-      .upsert({ id: 1, content });
-
-    if (error) {
-      console.error('Error saving to Supabase:', error);
+    try {
+      await setDoc(doc(db, "resumeData", "portfolio"), content);
+    } catch (error) {
+      console.error('Error saving to Firebase:', error);
       throw error;
     }
   };
@@ -187,7 +182,7 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
         updateResumeBookData,
         contactInfo,
         updateContactInfo,
-        saveToSupabase,
+        saveToFirebase,
         isLoading
       }}
     >
