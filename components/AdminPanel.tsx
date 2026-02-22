@@ -27,7 +27,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     certifications, updateCertifications, 
     skills, updateSkills,
     resumeBookData, updateResumeBookData,
-    contactInfo, updateContactInfo
+    contactInfo, updateContactInfo,
+    saveToSupabase
   } = usePortfolio();
   
   const [viewState, setViewState] = useState<ViewState>('verify');
@@ -42,8 +43,8 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [pwdData, setPwdData] = useState({ password: '', confirmPassword: '' });
 
   const [error, setError] = useState('');
-  const [activeTab, setActiveTab] = useState<'intro' | 'about' | 'skills' | 'experience' | 'education' | 'projects' | 'my flipbook' | 'contact info'>('intro');
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saved'>('idle');
+  const [activeTab, setActiveTab] = useState<'intro' | 'about' | 'skills' | 'experience' | 'education' | 'certifications' | 'my flipbook' | 'contact info'>('intro');
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
 
   // LOCAL BUFFER STATES FOR EDITING
   const [localAboutMe, setLocalAboutMe] = useState(aboutMe);
@@ -118,20 +119,29 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
     }
   };
 
-  const handleSaveChanges = () => {
-    updateAboutMe(localAboutMe);
-    updateHeroImage(localHeroImage);
-    updateHireStatus(localHireStatus);
-    updateDetailedBio(localDetailedBio);
-    updateSkills(localSkills);
-    updateExperiences(localExperiences);
-    updateEducation(localEducation);
-    updateCertifications(localCertifications);
-    updateResumeBookData(localResumeBookData);
-    updateContactInfo(localContactInfo);
-    
-    setSaveStatus('saved');
-    setTimeout(() => setSaveStatus('idle'), 2000);
+  const handleSaveChanges = async () => {
+    setSaveStatus('saving');
+    try {
+      updateAboutMe(localAboutMe);
+      updateHeroImage(localHeroImage);
+      updateHireStatus(localHireStatus);
+      updateDetailedBio(localDetailedBio);
+      updateSkills(localSkills);
+      updateExperiences(localExperiences);
+      updateEducation(localEducation);
+      updateCertifications(localCertifications);
+      updateResumeBookData(localResumeBookData);
+      updateContactInfo(localContactInfo);
+      
+      await saveToSupabase();
+      
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (err) {
+      console.error('Save failed:', err);
+      setSaveStatus('error');
+      setTimeout(() => setSaveStatus('idle'), 3000);
+    }
   };
 
   const inputClass = "w-full bg-neutral-900 border border-neutral-800 rounded-lg p-3 text-white focus:border-accent focus:outline-none transition-colors";
@@ -194,9 +204,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
         <div className="flex gap-4 items-center">
              <button 
                 onClick={handleSaveChanges} 
-                className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${saveStatus === 'saved' ? 'bg-green-500 text-white' : 'bg-accent text-white hover:bg-indigo-600'}`}
+                disabled={saveStatus === 'saving'}
+                className={`px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                  saveStatus === 'saved' ? 'bg-green-500 text-white' : 
+                  saveStatus === 'error' ? 'bg-red-500 text-white' :
+                  saveStatus === 'saving' ? 'bg-accent/50 text-white cursor-wait' :
+                  'bg-accent text-white hover:bg-indigo-600'
+                }`}
              >
-                {saveStatus === 'saved' ? <><CheckCircle className="w-4 h-4" /> Saved!</> : <><Save className="w-4 h-4" /> Save Changes</>}
+                {saveStatus === 'saving' ? 'Saving...' : 
+                 saveStatus === 'saved' ? <><CheckCircle className="w-4 h-4" /> Saved!</> : 
+                 saveStatus === 'error' ? 'Error!' :
+                 <><Save className="w-4 h-4" /> Save Changes</>}
              </button>
              <button onClick={onExit} className="px-4 py-2 border border-neutral-700 rounded-lg text-neutral-300 hover:text-white transition-colors">Back to Site</button>
              <button onClick={onExit} className="px-4 py-2 bg-red-500/10 text-red-500 hover:bg-red-500/20 rounded-lg transition-colors flex items-center gap-2">

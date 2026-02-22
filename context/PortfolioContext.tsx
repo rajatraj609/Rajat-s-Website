@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ABOUT_ME, DETAILED_BIO, EXPERIENCES, CERTIFICATIONS, SKILLS, EDUCATION, RESUME_BOOK_DATA, CONTACT_INFO, HIRE_STATUS } from '../constants';
 import { Experience, Certification, Skill, Education, ResumeBookData, ContactInfo, HireStatus } from '../types';
+import { supabase } from '../lib/supabase';
 
 interface PortfolioContextType {
   aboutMe: string; // Hero headline
@@ -23,89 +24,117 @@ interface PortfolioContextType {
   updateResumeBookData: (data: ResumeBookData) => void;
   contactInfo: ContactInfo;
   updateContactInfo: (data: ContactInfo) => void;
+  saveToSupabase: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const PortfolioContext = createContext<PortfolioContextType | undefined>(undefined);
 
 export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [isLoading, setIsLoading] = useState(true);
   // Initialize from localStorage or fallback to constants
-  const [aboutMe, setAboutMe] = useState(() => {
-    const saved = localStorage.getItem('portfolio_about');
-    return saved || ABOUT_ME;
-  });
+  const [aboutMe, setAboutMe] = useState(ABOUT_ME);
+  const [heroImage, setHeroImage] = useState('https://drive.google.com/file/d/11nYPAIjYeAAKT6xupCNPyK1S3j5C7jFJ/view?usp=sharing');
+  const [hireStatus, setHireStatus] = useState<HireStatus>(HIRE_STATUS);
+  const [detailedBio, setDetailedBio] = useState(DETAILED_BIO);
+  const [experiences, setExperiences] = useState<Experience[]>(EXPERIENCES);
+  const [education, setEducation] = useState<Education[]>(EDUCATION);
+  const [certifications, setCertifications] = useState<Certification[]>(CERTIFICATIONS);
+  const [skills, setSkills] = useState<Skill[]>(SKILLS);
+  const [resumeBookData, setResumeBookData] = useState<ResumeBookData>(RESUME_BOOK_DATA);
+  const [contactInfo, setContactInfo] = useState<ContactInfo>(CONTACT_INFO);
 
-  const [heroImage, setHeroImage] = useState(() => {
-    const saved = localStorage.getItem('portfolio_hero_image');
-    return saved || 'https://drive.google.com/file/d/11nYPAIjYeAAKT6xupCNPyK1S3j5C7jFJ/view?usp=sharing';
-  });
-
-  const [hireStatus, setHireStatus] = useState<HireStatus>(() => {
-    const saved = localStorage.getItem('portfolio_hire_status');
-    return (saved as HireStatus) || HIRE_STATUS;
-  });
-
-  const [detailedBio, setDetailedBio] = useState(() => {
-    const saved = localStorage.getItem('portfolio_detailed_bio');
-    return saved || DETAILED_BIO;
-  });
-
-  const [experiences, setExperiences] = useState<Experience[]>(() => {
-    const saved = localStorage.getItem('portfolio_experiences');
-    return saved ? JSON.parse(saved) : EXPERIENCES;
-  });
-
-  const [education, setEducation] = useState<Education[]>(() => {
-    const saved = localStorage.getItem('portfolio_education');
-    return saved ? JSON.parse(saved) : EDUCATION;
-  });
-
-  const [certifications, setCertifications] = useState<Certification[]>(() => {
-    const saved = localStorage.getItem('portfolio_certifications');
-    return saved ? JSON.parse(saved) : CERTIFICATIONS;
-  });
-
-  const [skills, setSkills] = useState<Skill[]>(() => {
-    const saved = localStorage.getItem('portfolio_skills');
-    return saved ? JSON.parse(saved) : SKILLS;
-  });
-
-  const [resumeBookData, setResumeBookData] = useState<ResumeBookData>(() => {
-    const saved = localStorage.getItem('portfolio_resume_book');
-    if (saved) {
+  // Fetch from Supabase on mount
+  useEffect(() => {
+    const fetchData = async () => {
       try {
-        const parsed = JSON.parse(saved);
-        return { ...RESUME_BOOK_DATA, ...parsed };
-      } catch (e) {
-        return RESUME_BOOK_DATA;
-      }
-    }
-    return RESUME_BOOK_DATA;
-  });
+        const { data, error } = await supabase
+          .from('portfolio_data')
+          .select('content')
+          .eq('id', 1)
+          .single();
 
-  const [contactInfo, setContactInfo] = useState<ContactInfo>(() => {
-    const saved = localStorage.getItem('portfolio_contact_info');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        return { ...CONTACT_INFO, ...parsed };
-      } catch (e) {
-        return CONTACT_INFO;
+        if (error) {
+          console.warn('Supabase fetch error (table might not exist yet):', error.message);
+          // Fallback to localStorage if Supabase fails
+          const savedAbout = localStorage.getItem('portfolio_about');
+          if (savedAbout) setAboutMe(savedAbout);
+          const savedHero = localStorage.getItem('portfolio_hero_image');
+          if (savedHero) setHeroImage(savedHero);
+          const savedHire = localStorage.getItem('portfolio_hire_status');
+          if (savedHire) setHireStatus(savedHire as HireStatus);
+          const savedBio = localStorage.getItem('portfolio_detailed_bio');
+          if (savedBio) setDetailedBio(savedBio);
+          const savedExp = localStorage.getItem('portfolio_experiences');
+          if (savedExp) setExperiences(JSON.parse(savedExp));
+          const savedEdu = localStorage.getItem('portfolio_education');
+          if (savedEdu) setEducation(JSON.parse(savedEdu));
+          const savedCert = localStorage.getItem('portfolio_certifications');
+          if (savedCert) setCertifications(JSON.parse(savedCert));
+          const savedSkills = localStorage.getItem('portfolio_skills');
+          if (savedSkills) setSkills(JSON.parse(savedSkills));
+          const savedResume = localStorage.getItem('portfolio_resume_book');
+          if (savedResume) setResumeBookData(JSON.parse(savedResume));
+          const savedContact = localStorage.getItem('portfolio_contact_info');
+          if (savedContact) setContactInfo(JSON.parse(savedContact));
+        } else if (data && data.content) {
+          const c = data.content;
+          if (c.aboutMe) setAboutMe(c.aboutMe);
+          if (c.heroImage) setHeroImage(c.heroImage);
+          if (c.hireStatus) setHireStatus(c.hireStatus);
+          if (c.detailedBio) setDetailedBio(c.detailedBio);
+          if (c.experiences) setExperiences(c.experiences);
+          if (c.education) setEducation(c.education);
+          if (c.certifications) setCertifications(c.certifications);
+          if (c.skills) setSkills(c.skills);
+          if (c.resumeBookData) setResumeBookData(c.resumeBookData);
+          if (c.contactInfo) setContactInfo(c.contactInfo);
+        }
+      } catch (err) {
+        console.error('Error fetching from Supabase:', err);
+      } finally {
+        setIsLoading(false);
       }
-    }
-    return CONTACT_INFO;
-  });
+    };
 
-  // Persistence Effects
-  useEffect(() => localStorage.setItem('portfolio_about', aboutMe), [aboutMe]);
-  useEffect(() => localStorage.setItem('portfolio_hero_image', heroImage), [heroImage]);
-  useEffect(() => localStorage.setItem('portfolio_hire_status', hireStatus), [hireStatus]);
-  useEffect(() => localStorage.setItem('portfolio_detailed_bio', detailedBio), [detailedBio]);
-  useEffect(() => localStorage.setItem('portfolio_experiences', JSON.stringify(experiences)), [experiences]);
-  useEffect(() => localStorage.setItem('portfolio_education', JSON.stringify(education)), [education]);
-  useEffect(() => localStorage.setItem('portfolio_certifications', JSON.stringify(certifications)), [certifications]);
-  useEffect(() => localStorage.setItem('portfolio_skills', JSON.stringify(skills)), [skills]);
-  useEffect(() => localStorage.setItem('portfolio_resume_book', JSON.stringify(resumeBookData)), [resumeBookData]);
-  useEffect(() => localStorage.setItem('portfolio_contact_info', JSON.stringify(contactInfo)), [contactInfo]);
+    fetchData();
+  }, []);
+
+  // Persistence Effects (Local Storage as cache)
+  useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_about', aboutMe); }, [aboutMe, isLoading]);
+  useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_hero_image', heroImage); }, [heroImage, isLoading]);
+  useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_hire_status', hireStatus); }, [hireStatus, isLoading]);
+  useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_detailed_bio', detailedBio); }, [detailedBio, isLoading]);
+  useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_experiences', JSON.stringify(experiences)); }, [experiences, isLoading]);
+  useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_education', JSON.stringify(education)); }, [education, isLoading]);
+  useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_certifications', JSON.stringify(certifications)); }, [certifications, isLoading]);
+  useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_skills', JSON.stringify(skills)); }, [skills, isLoading]);
+  useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_resume_book', JSON.stringify(resumeBookData)); }, [resumeBookData, isLoading]);
+  useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_contact_info', JSON.stringify(contactInfo)); }, [contactInfo, isLoading]);
+
+  const saveToSupabase = async () => {
+    const content = {
+      aboutMe,
+      heroImage,
+      hireStatus,
+      detailedBio,
+      experiences,
+      education,
+      certifications,
+      skills,
+      resumeBookData,
+      contactInfo
+    };
+
+    const { error } = await supabase
+      .from('portfolio_data')
+      .upsert({ id: 1, content });
+
+    if (error) {
+      console.error('Error saving to Supabase:', error);
+      throw error;
+    }
+  };
 
   const updateAboutMe = (text: string) => setAboutMe(text);
   const updateHeroImage = (url: string) => setHeroImage(url);
@@ -140,7 +169,9 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
         resumeBookData,
         updateResumeBookData,
         contactInfo,
-        updateContactInfo
+        updateContactInfo,
+        saveToSupabase,
+        isLoading
       }}
     >
       {children}

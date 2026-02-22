@@ -1,4 +1,4 @@
-import React, { useRef, useState, forwardRef } from 'react';
+import React, { useRef, useState, useEffect, forwardRef } from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import { usePortfolio } from '../context/PortfolioContext';
 import { 
@@ -53,7 +53,7 @@ const Page = forwardRef<HTMLDivElement, PageProps>((props, ref) => {
       <div className={`absolute inset-0 pointer-events-none z-20 ${shadowClass}`}></div>
 
       {/* Content Container */}
-      <div className="h-full w-full p-6 md:p-8 pb-14 flex flex-col relative z-10 overflow-y-auto scrollbar-hide">
+      <div className="h-full w-full p-4 md:p-8 pb-14 flex flex-col relative z-10 overflow-y-auto scrollbar-hide">
         {props.children}
       </div>
       
@@ -110,7 +110,25 @@ const ResumeBook: React.FC = () => {
   const bookRef = useRef<any>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mobileWidth, setMobileWidth] = useState(320);
   const { aboutMe, experiences, skills, education, resumeBookData } = usePortfolio();
+
+  // Handle responsive behavior
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      if (mobile) {
+        // Leave some margin for the screen edges
+        setMobileWidth(Math.min(window.innerWidth - 40, 400));
+      }
+    };
+    
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const onFlip = (e: { data: number }) => {
     setCurrentPage(e.data);
@@ -142,15 +160,16 @@ const ResumeBook: React.FC = () => {
       </div>
 
       {/* Book Wrapper with heavy shadow to ground it */}
-      <div className="relative shadow-[0_20px_50px_-12px_rgba(0,0,0,0.9)]">
+      <div className="relative shadow-[0_20px_50px_-12px_rgba(0,0,0,0.9)] max-w-[100vw]">
         {/* @ts-ignore - react-pageflip types workaround */}
         <HTMLFlipBook
-          width={width}
-          height={height}
-          size="stretch"
-          minWidth={300}
+          key={isMobile ? 'mobile' : 'desktop'}
+          width={isMobile ? mobileWidth : width}
+          height={isMobile ? Math.floor(mobileWidth * 1.5) : height}
+          size={isMobile ? "fixed" : "stretch"}
+          minWidth={isMobile ? 250 : 300}
           maxWidth={1000}
-          minHeight={400}
+          minHeight={isMobile ? 350 : 400}
           maxHeight={1533}
           maxShadowOpacity={0.5}
           showCover={true}
@@ -160,10 +179,13 @@ const ResumeBook: React.FC = () => {
           className="bg-transparent"
           style={{ margin: '0 auto' }}
           ref={bookRef}
-          usePortrait={false}
+          usePortrait={isMobile}
           startPage={0}
           drawShadow={true}
           flippingTime={1000}
+          swipeDistance={30}
+          useMouseEvents={!isMobile}
+          clickEventForward={!isMobile}
         >
           {/* --- 1. FRONT COVER (Right when closed) --- */}
           <Cover isCover>
