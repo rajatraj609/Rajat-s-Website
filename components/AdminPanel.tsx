@@ -3,7 +3,8 @@ import { usePortfolio } from '../context/PortfolioContext';
 import { Lock, User, Calendar, Phone, Mail, Save, LogOut, ArrowLeft, CheckCircle, Download, MapPin, Globe, Linkedin, Twitter, Github, Image as ImageIcon } from 'lucide-react';
 import { Experience, Certification, Skill, Education, ResumeBookData, ContactInfo, HireStatus } from '../types';
 import { getDirectImageUrl } from '../utils/imageUtils';
-import { Plus, Trash2, Award } from 'lucide-react';
+import { Plus, Trash2, Award, AlertTriangle } from 'lucide-react';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 // Verification Constants
 const VERIFY_EMAIL = "pushpraj2502@gmail.com";
@@ -200,7 +201,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const renderDashboard = () => (
     <div className="w-full max-w-6xl mx-auto px-6 py-12">
       <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
-        <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+        <div className="flex flex-col">
+          <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+          {!isSupabaseConfigured && (
+            <div className="flex items-center gap-2 text-amber-500 text-xs mt-1 font-medium">
+              <AlertTriangle className="w-3 h-3" />
+              Supabase not configured. Changes will only save locally.
+            </div>
+          )}
+        </div>
         <div className="flex gap-4 items-center">
              <button 
                 onClick={handleSaveChanges} 

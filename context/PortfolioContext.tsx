@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { ABOUT_ME, DETAILED_BIO, EXPERIENCES, CERTIFICATIONS, SKILLS, EDUCATION, RESUME_BOOK_DATA, CONTACT_INFO, HIRE_STATUS } from '../constants';
 import { Experience, Certification, Skill, Education, ResumeBookData, ContactInfo, HireStatus } from '../types';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 interface PortfolioContextType {
   aboutMe: string; // Hero headline
@@ -32,6 +32,7 @@ const PortfolioContext = createContext<PortfolioContextType | undefined>(undefin
 
 export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
+  const [supabaseError, setSupabaseError] = useState<string | null>(null);
   // Initialize from localStorage or fallback to constants
   const [aboutMe, setAboutMe] = useState(ABOUT_ME);
   const [heroImage, setHeroImage] = useState('https://drive.google.com/file/d/11nYPAIjYeAAKT6xupCNPyK1S3j5C7jFJ/view?usp=sharing');
@@ -47,6 +48,13 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Fetch from Supabase on mount
   useEffect(() => {
     const fetchData = async () => {
+      if (!isSupabaseConfigured) {
+        console.warn('Supabase not configured, skipping fetch.');
+        loadFromLocalStorage();
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const { data, error } = await supabase
           .from('portfolio_data')
@@ -55,28 +63,9 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
           .single();
 
         if (error) {
-          console.warn('Supabase fetch error (table might not exist yet):', error.message);
-          // Fallback to localStorage if Supabase fails
-          const savedAbout = localStorage.getItem('portfolio_about');
-          if (savedAbout) setAboutMe(savedAbout);
-          const savedHero = localStorage.getItem('portfolio_hero_image');
-          if (savedHero) setHeroImage(savedHero);
-          const savedHire = localStorage.getItem('portfolio_hire_status');
-          if (savedHire) setHireStatus(savedHire as HireStatus);
-          const savedBio = localStorage.getItem('portfolio_detailed_bio');
-          if (savedBio) setDetailedBio(savedBio);
-          const savedExp = localStorage.getItem('portfolio_experiences');
-          if (savedExp) setExperiences(JSON.parse(savedExp));
-          const savedEdu = localStorage.getItem('portfolio_education');
-          if (savedEdu) setEducation(JSON.parse(savedEdu));
-          const savedCert = localStorage.getItem('portfolio_certifications');
-          if (savedCert) setCertifications(JSON.parse(savedCert));
-          const savedSkills = localStorage.getItem('portfolio_skills');
-          if (savedSkills) setSkills(JSON.parse(savedSkills));
-          const savedResume = localStorage.getItem('portfolio_resume_book');
-          if (savedResume) setResumeBookData(JSON.parse(savedResume));
-          const savedContact = localStorage.getItem('portfolio_contact_info');
-          if (savedContact) setContactInfo(JSON.parse(savedContact));
+          console.warn('Supabase fetch error:', error.message);
+          setSupabaseError(error.message);
+          loadFromLocalStorage();
         } else if (data && data.content) {
           const c = data.content;
           if (c.aboutMe) setAboutMe(c.aboutMe);
@@ -92,9 +81,33 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
         }
       } catch (err) {
         console.error('Error fetching from Supabase:', err);
+        loadFromLocalStorage();
       } finally {
         setIsLoading(false);
       }
+    };
+
+    const loadFromLocalStorage = () => {
+      const savedAbout = localStorage.getItem('portfolio_about');
+      if (savedAbout) setAboutMe(savedAbout);
+      const savedHero = localStorage.getItem('portfolio_hero_image');
+      if (savedHero) setHeroImage(savedHero);
+      const savedHire = localStorage.getItem('portfolio_hire_status');
+      if (savedHire) setHireStatus(savedHire as HireStatus);
+      const savedBio = localStorage.getItem('portfolio_detailed_bio');
+      if (savedBio) setDetailedBio(savedBio);
+      const savedExp = localStorage.getItem('portfolio_experiences');
+      if (savedExp) setExperiences(JSON.parse(savedExp));
+      const savedEdu = localStorage.getItem('portfolio_education');
+      if (savedEdu) setEducation(JSON.parse(savedEdu));
+      const savedCert = localStorage.getItem('portfolio_certifications');
+      if (savedCert) setCertifications(JSON.parse(savedCert));
+      const savedSkills = localStorage.getItem('portfolio_skills');
+      if (savedSkills) setSkills(JSON.parse(savedSkills));
+      const savedResume = localStorage.getItem('portfolio_resume_book');
+      if (savedResume) setResumeBookData(JSON.parse(savedResume));
+      const savedContact = localStorage.getItem('portfolio_contact_info');
+      if (savedContact) setContactInfo(JSON.parse(savedContact));
     };
 
     fetchData();
@@ -113,6 +126,10 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
   useEffect(() => { if (!isLoading) localStorage.setItem('portfolio_contact_info', JSON.stringify(contactInfo)); }, [contactInfo, isLoading]);
 
   const saveToSupabase = async () => {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase is not configured. Please set your environment variables.');
+    }
+
     const content = {
       aboutMe,
       heroImage,

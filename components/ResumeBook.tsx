@@ -111,7 +111,7 @@ const ResumeBook: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const [mobileWidth, setMobileWidth] = useState(320);
+  const [mobileWidth, setMobileWidth] = useState(300); // Default to a safe minWidth
   const { aboutMe, experiences, skills, education, resumeBookData } = usePortfolio();
 
   // Handle responsive behavior
@@ -120,8 +120,9 @@ const ResumeBook: React.FC = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
       if (mobile) {
-        // Leave some margin for the screen edges
-        setMobileWidth(Math.min(window.innerWidth - 40, 400));
+        // Ensure width is at least 250 and has some padding
+        const calculatedWidth = Math.max(250, Math.min(window.innerWidth - 40, 400));
+        setMobileWidth(calculatedWidth);
       }
     };
     
@@ -163,13 +164,13 @@ const ResumeBook: React.FC = () => {
       <div className="relative shadow-[0_20px_50px_-12px_rgba(0,0,0,0.9)] max-w-[100vw]">
         {/* @ts-ignore - react-pageflip types workaround */}
         <HTMLFlipBook
-          key={isMobile ? 'mobile' : 'desktop'}
+          key={isMobile ? `mobile-${mobileWidth}` : 'desktop'}
           width={isMobile ? mobileWidth : width}
-          height={isMobile ? Math.floor(mobileWidth * 1.5) : height}
+          height={isMobile ? Math.floor(mobileWidth * 1.4) : height}
           size={isMobile ? "fixed" : "stretch"}
-          minWidth={isMobile ? 250 : 300}
+          minWidth={isMobile ? mobileWidth : 300}
           maxWidth={1000}
-          minHeight={isMobile ? 350 : 400}
+          minHeight={isMobile ? Math.floor(mobileWidth * 1.4) : 400}
           maxHeight={1533}
           maxShadowOpacity={0.5}
           showCover={true}
