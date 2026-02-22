@@ -46,6 +46,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'intro' | 'about' | 'skills' | 'experience' | 'education' | 'certifications' | 'my flipbook' | 'contact info'>('intro');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [isInitializing, setIsInitializing] = useState(false);
 
   // LOCAL BUFFER STATES FOR EDITING
   const [localAboutMe, setLocalAboutMe] = useState(aboutMe);
@@ -117,6 +118,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
       setError('');
     } else {
       setError('Invalid email or password.');
+    }
+  };
+
+  const handleInitializeDB = async () => {
+    if (!window.confirm("This will overwrite your Firestore data with current local defaults. Continue?")) return;
+    
+    setIsInitializing(true);
+    try {
+      await saveToFirebase();
+      alert("Database initialized successfully!");
+      setSaveStatus('saved');
+      setTimeout(() => setSaveStatus('idle'), 2000);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to initialize database. Check console for errors.");
+    } finally {
+      setIsInitializing(false);
     }
   };
 
@@ -213,6 +231,15 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ onExit }) => {
           )}
         </div>
         <div className="flex gap-4 items-center">
+             {isFirebaseConfigured && (
+               <button 
+                 onClick={handleInitializeDB}
+                 disabled={isInitializing}
+                 className="px-4 py-2 bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 rounded-lg transition-colors text-sm font-medium border border-amber-500/20"
+               >
+                 {isInitializing ? 'Initializing...' : 'Seed Firestore'}
+               </button>
+             )}
              <button 
                 onClick={handleSaveChanges} 
                 disabled={saveStatus === 'saving'}
