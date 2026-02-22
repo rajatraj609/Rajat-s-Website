@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect, forwardRef } from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import { usePortfolio } from '../context/PortfolioContext';
+import { Experience, Education, Skill, Certification } from '../types';
 import { 
   ChevronRight, 
   ChevronLeft, 
@@ -53,7 +54,7 @@ const Page = forwardRef<HTMLDivElement, PageProps>((props, ref) => {
       <div className={`absolute inset-0 pointer-events-none z-20 ${shadowClass}`}></div>
 
       {/* Content Container */}
-      <div className="h-full w-full p-4 md:p-8 pb-14 flex flex-col relative z-10 overflow-y-auto scrollbar-hide">
+      <div className="h-full w-full p-4 md:p-6 pb-10 flex flex-col relative z-10 overflow-y-auto custom-scrollbar">
         {props.children}
       </div>
       
@@ -112,7 +113,7 @@ const ResumeBook: React.FC = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [mobileWidth, setMobileWidth] = useState(300); // Default to a safe minWidth
-  const { aboutMe, experiences, skills, education, resumeBookData } = usePortfolio();
+  const { aboutMe, experiences, skills, education, certifications, resumeBookData } = usePortfolio();
 
   // Handle responsive behavior
   useEffect(() => {
@@ -120,7 +121,6 @@ const ResumeBook: React.FC = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
       if (mobile) {
-        // Ensure width is at least 250 and has some padding
         const calculatedWidth = Math.max(250, Math.min(window.innerWidth - 40, 400));
         setMobileWidth(calculatedWidth);
       }
@@ -147,9 +147,183 @@ const ResumeBook: React.FC = () => {
   const width = 450;
   const height = 600;
 
-  // Split experiences to fit pages nicely
-  const expPage1 = experiences.slice(0, 2);
-  const expPage2 = experiences.slice(2, 4);
+  // Helper to chunk arrays for pagination
+  const chunkArray = <T,>(arr: T[], size: number): T[][] => {
+    const chunks: T[][] = [];
+    if (!arr || arr.length === 0) return [];
+    for (let i = 0; i < arr.length; i += size) {
+      chunks.push(arr.slice(i, i + size));
+    }
+    return chunks;
+  };
+
+  // Generate dynamic pages
+  const renderPages = () => {
+    const pages: React.ReactNode[] = [];
+    let pageNum = 1;
+
+    // 1. Profile Page
+    pages.push(
+      <Page key="profile" number={pageNum++} position="right">
+        <div className="border-b-2 border-neutral-100 pb-4 mb-6">
+            <h3 className="text-xl font-serif font-bold text-neutral-800 flex items-center gap-2 uppercase tracking-wide">
+                Profile
+            </h3>
+        </div>
+        <div className="prose prose-sm prose-neutral leading-relaxed text-neutral-600 font-serif text-justify">
+           <p className="first-letter:text-5xl first-letter:font-bold first-letter:text-neutral-900 first-letter:float-left first-letter:mr-3 first-letter:font-serif">
+             {aboutMe}
+           </p>
+        </div>
+        <div className="mt-auto flex justify-center opacity-30">
+            <Star className="w-4 h-4 text-neutral-400" />
+        </div>
+      </Page>
+    );
+
+    // 2. Experience Pages - One page per experience
+    experiences.forEach((exp, idx) => {
+      pages.push(
+        <Page key={`exp-${idx}`} number={pageNum++} position={pageNum % 2 === 0 ? 'left' : 'right'}>
+          <div className="border-b-2 border-neutral-100 pb-4 mb-6">
+              <h3 className="text-xl font-serif font-bold text-neutral-800 uppercase tracking-wide">
+                  {idx === 0 ? 'Experience' : 'Experience (Cont.)'}
+              </h3>
+          </div>
+          <div className="space-y-4">
+            <div className="relative">
+               <h4 className="font-bold text-neutral-900 text-sm md:text-base leading-tight">{exp.role}</h4>
+               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-baseline mb-2 mt-1 gap-1">
+                   <span className="text-xs font-semibold text-indigo-600">{exp.company}</span>
+                   <span className="text-[9px] text-neutral-400 font-medium uppercase">{exp.period}</span>
+               </div>
+               <ul className="text-[10px] md:text-[11px] text-neutral-600 leading-relaxed font-serif list-disc ml-4 space-y-1.5">
+                 {exp.description.map((desc, dIdx) => (
+                   <li key={dIdx}>{desc}</li>
+                 ))}
+               </ul>
+            </div>
+          </div>
+        </Page>
+      );
+    });
+
+    // 3. Education Page - All in one page
+    pages.push(
+      <Page key="edu-single" number={pageNum++} position={pageNum % 2 === 0 ? 'left' : 'right'}>
+        <div className="border-b-2 border-neutral-100 pb-4 mb-6">
+            <h3 className="text-xl font-serif font-bold text-neutral-800 uppercase tracking-wide">Education</h3>
+        </div>
+        <div className="space-y-8">
+           {education.map((edu: Education, i) => (
+             <div key={i} className="relative">
+                <div className="font-bold text-neutral-800 text-sm md:text-base">{edu.degree}</div>
+                <div className="text-xs text-indigo-600 font-semibold mb-1">{edu.university}</div>
+                <div className="text-[11px] text-neutral-500 font-medium">{edu.school}</div>
+                <div className="text-[10px] text-neutral-400 italic mb-2">{edu.year}</div>
+                {edu.cgpa && (
+                  <div className="inline-block px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase rounded border border-indigo-100">
+                    CGPA: {edu.cgpa}
+                  </div>
+                )}
+             </div>
+           ))}
+           {education.length === 0 && (
+             <div className="flex flex-col items-center justify-center h-full opacity-10 italic text-sm">
+                <GraduationCap className="w-12 h-12 mb-4" />
+                <p>No Education Listed</p>
+             </div>
+           )}
+        </div>
+      </Page>
+    );
+
+    // 4. Skills Page - All in one page
+    pages.push(
+      <Page key="skills-single" number={pageNum++} position={pageNum % 2 === 0 ? 'left' : 'right'}>
+        <div className="border-b-2 border-neutral-100 pb-4 mb-6">
+            <h3 className="text-xl font-serif font-bold text-neutral-800 uppercase tracking-wide">Technical Skills</h3>
+        </div>
+        <div className="space-y-8">
+           {skills.map((skillGroup: Skill, i) => (
+             <div key={i}>
+                <h4 className="text-[10px] font-bold text-neutral-400 uppercase mb-3 tracking-widest">{skillGroup.category}</h4>
+                <div className="flex flex-wrap gap-2">
+                   {skillGroup.items.map(s => (
+                     <span key={s} className="px-2 py-1 bg-white text-neutral-700 text-[10px] font-bold uppercase tracking-wide rounded border border-neutral-200 shadow-sm">
+                       {s}
+                     </span>
+                   ))}
+                </div>
+             </div>
+           ))}
+           {skills.length === 0 && (
+             <div className="flex flex-col items-center justify-center h-full opacity-10 italic text-sm">
+                <Code className="w-12 h-12 mb-4" />
+                <p>No Skills Listed</p>
+             </div>
+           )}
+        </div>
+      </Page>
+    );
+
+    // 5. Certification Page - All in one page
+    pages.push(
+      <Page key="certs-single" number={pageNum++} position={pageNum % 2 === 0 ? 'left' : 'right'}>
+        <div className="border-b-2 border-neutral-100 pb-4 mb-6">
+            <h3 className="text-xl font-serif font-bold text-neutral-800 uppercase tracking-wide">Certifications</h3>
+        </div>
+        <div className="space-y-6">
+           {certifications.map((cert: Certification, cIdx) => (
+             <div key={cIdx} className="relative">
+                <div className="font-bold text-neutral-800 text-sm">{cert.name}</div>
+                <div className="text-xs text-indigo-600 font-semibold">{cert.issuer}</div>
+                <div className="text-[10px] text-neutral-400 italic">{cert.issuedDate}</div>
+             </div>
+           ))}
+           {certifications.length === 0 && (
+             <div className="flex flex-col items-center justify-center h-full opacity-10 italic text-sm">
+                <Star className="w-12 h-12 mb-4" />
+                <p>No Certifications Listed</p>
+             </div>
+           )}
+        </div>
+      </Page>
+    );
+
+    // 6. Thank You Page - Final white paper page
+    pages.push(
+      <Page key="thank-you" number={pageNum++} position={pageNum % 2 === 0 ? 'left' : 'right'}>
+        <div className="h-full w-full flex flex-col items-center justify-center px-4">
+          <div className="flex items-center justify-center w-full">
+            {/* Left Decorative line */}
+            <div className="h-px bg-neutral-300 flex-1"></div>
+            
+            {/* Calligraphy Thank You */}
+            <h2 className="font-calligraphy text-5xl md:text-6xl text-neutral-800 px-4 whitespace-nowrap select-none">
+              thank you
+            </h2>
+
+            {/* Right Decorative line */}
+            <div className="h-px bg-neutral-300 flex-1"></div>
+          </div>
+        </div>
+      </Page>
+    );
+
+    // Ensure even number of pages for spread (excluding covers)
+    if (pages.length % 2 !== 0) {
+      pages.push(
+        <Page key="blank-spacer" number={pageNum++} position={pageNum % 2 === 0 ? 'left' : 'right'}>
+          <div className="flex items-center justify-center h-full opacity-10">
+             <Star className="w-8 h-8" />
+          </div>
+        </Page>
+      );
+    }
+
+    return pages;
+  };
 
   return (
     <section id="flipbook" className="py-24 bg-neutral-900 overflow-hidden flex flex-col items-center justify-center min-h-screen perspective-[2000px]">
@@ -194,13 +368,11 @@ const ResumeBook: React.FC = () => {
                <User className="w-12 h-12 text-[#fbbf24]" />
             </div>
             
-            {/* Title, Separator Line, Subtitle */}
             <div className="w-full flex flex-col items-center justify-center text-center px-4">
                  <h1 className="text-3xl md:text-4xl font-serif font-bold tracking-[0.2em] text-white drop-shadow-lg uppercase break-words mb-6">
                     {resumeBookData.coverTitle}
                  </h1>
                  
-                 {/* Separator Line */}
                  <div className="h-0.5 w-24 bg-[#fbbf24] mb-6 shadow-[0_0_10px_#fbbf24]"></div>
 
                  <p className="text-[#fbbf24] text-sm md:text-base tracking-[0.2em] uppercase whitespace-nowrap">
@@ -214,134 +386,40 @@ const ResumeBook: React.FC = () => {
           </Cover>
 
           {/* --- 2. INNER FRONT COVER (Left when open) --- */}
-          {/* This mirrors the front cover to look like the back of the hard shell, but is now blank */}
           <Cover isInnerCover>
-             {/* Blank content, only border from Cover component remains */}
-          </Cover>
-
-          {/* --- 3. PAGE 1: INTRODUCTION (Right) --- */}
-          <Page number={1} position="right">
-            <div className="border-b-2 border-neutral-100 pb-4 mb-6">
-                <h3 className="text-xl font-serif font-bold text-neutral-800 flex items-center gap-2 uppercase tracking-wide">
-                    Profile
-                </h3>
-            </div>
-            <div className="prose prose-sm prose-neutral leading-7 text-neutral-600 font-serif">
-               <p className="first-letter:text-5xl first-letter:font-bold first-letter:text-neutral-900 first-letter:float-left first-letter:mr-3 first-letter:font-serif">
-                 {aboutMe}
-               </p>
-            </div>
-            <div className="mt-auto flex justify-center opacity-50">
-                <Star className="w-4 h-4 text-neutral-400" />
-            </div>
-          </Page>
-
-          {/* --- 4. PAGE 2: EXPERIENCE I (Left) --- */}
-          <Page number={2} position="left">
-             <div className="border-b-2 border-neutral-100 pb-4 mb-8">
-                <h3 className="text-xl font-serif font-bold text-neutral-800 flex items-center gap-2 uppercase tracking-wide">
-                    Experience
-                </h3>
-            </div>
-            <div className="space-y-10">
-                {expPage1.map((exp, i) => (
-                  <div key={i} className="relative">
-                     <h4 className="font-bold text-neutral-900 text-base">{exp.role}</h4>
-                     <div className="flex justify-between items-baseline mb-2">
-                         <span className="text-xs font-semibold text-indigo-600">{exp.company}</span>
-                         <span className="text-[10px] text-neutral-400 font-medium uppercase">{exp.period}</span>
-                     </div>
-                     <ul className="text-[13px] text-neutral-600 leading-relaxed font-serif list-disc ml-4 space-y-1">
-                       {exp.description.map((desc, idx) => (
-                         <li key={idx}>{desc}</li>
-                       ))}
-                     </ul>
-                  </div>
-                ))}
-            </div>
-          </Page>
-
-          {/* --- 5. PAGE 3: EXPERIENCE II (Right) --- */}
-          <Page number={3} position="right">
-            <div className="space-y-10 mt-4">
-                {expPage2.map((exp, i) => (
-                  <div key={i} className="relative">
-                     <h4 className="font-bold text-neutral-900 text-base">{exp.role}</h4>
-                      <div className="flex justify-between items-baseline mb-2">
-                         <span className="text-xs font-semibold text-indigo-600">{exp.company}</span>
-                         <span className="text-[10px] text-neutral-400 font-medium uppercase">{exp.period}</span>
-                     </div>
-                     <ul className="text-[13px] text-neutral-600 leading-relaxed font-serif list-disc ml-4 space-y-1">
-                       {exp.description.map((desc, idx) => (
-                         <li key={idx}>{desc}</li>
-                       ))}
-                     </ul>
-                  </div>
-                ))}
-               
-               {experiences.length <= 2 && (
-                 <div className="flex items-center justify-center h-40 border-2 border-dashed border-neutral-200 rounded-lg text-neutral-400 text-sm">
-                    More history available on request
-                 </div>
-               )}
-            </div>
-          </Page>
-
-           {/* --- 6. PAGE 4: SKILLS & EDUCATION (Left) --- */}
-          <Page number={4} position="left">
-            <div className="border-b-2 border-neutral-100 pb-4 mb-6">
-                <h3 className="text-xl font-serif font-bold text-neutral-800 flex items-center gap-2 uppercase tracking-wide">
-                    Skills & Edu
-                </h3>
-            </div>
-
-            <div className="mb-8">
-               <h4 className="text-xs font-bold text-neutral-400 uppercase mb-3 tracking-widest">Expertise</h4>
-               <div className="flex flex-wrap gap-2">
-                  {skills[0]?.items.slice(0, 8).map(s => (
-                    <span key={s} className="px-2 py-1 bg-neutral-100 text-neutral-600 text-[10px] font-bold uppercase tracking-wide rounded-sm border border-neutral-200">
-                      {s}
-                    </span>
-                  ))}
-               </div>
-            </div>
-
-            <div>
-               <h4 className="text-xs font-bold text-neutral-400 uppercase mb-3 tracking-widest">Education</h4>
-               {education.slice(0, 2).map((edu, i) => (
-                 <div key={i} className="mb-3 last:mb-0">
-                    <div className="font-bold text-neutral-800 text-sm">{edu.degree}</div>
-                    <div className="text-xs text-neutral-600 font-medium">{edu.university}</div>
-                    <div className="text-[10px] text-neutral-400 italic">{edu.school}, {edu.year}</div>
-                    {edu.cgpa && <div className="text-[10px] text-indigo-600 font-bold uppercase mt-0.5">CGPA: {edu.cgpa}</div>}
-                 </div>
-               ))}
-            </div>
-          </Page>
-
-          {/* --- 7. INNER BACK COVER (Right when open) --- */}
-          <Cover isInnerCover>
-              {/* Blank content, only border from Cover component remains */}
-          </Cover>
-
-          {/* --- 8. BACK COVER (Left when closed) --- */}
-          <Cover isCover>
-             <div className="h-full flex flex-col items-center justify-center">
-                 <div className="w-16 h-16 bg-[#fbbf24] rounded-full flex items-center justify-center mb-6 text-[#1e1b4b]">
-                     <span className="text-2xl font-bold font-serif">R</span>
-                 </div>
-                 
-                 <a 
-                   href={resumeBookData.cvLink || '#'}
-                   target="_blank"
-                   rel="noopener noreferrer"
-                   className="group flex items-center gap-3 px-6 py-3 border border-[#fbbf24] rounded-full text-[#fbbf24] hover:bg-[#fbbf24] hover:text-[#1e1b4b] transition-all font-serif tracking-widest text-sm uppercase"
-                 >
-                    Download CV
-                    <Download className="w-4 h-4 group-hover:animate-bounce" />
-                 </a>
+             <div className="text-center opacity-20">
+                <p className="text-xs uppercase tracking-[0.3em]">Portfolio Edition 2026</p>
              </div>
           </Cover>
+
+          {/* Dynamic Content Pages */}
+          {renderPages()}
+
+          {/* --- INNER BACK COVER (Right when open) --- */}
+          <Cover isInnerCover>
+              <div className="text-center opacity-20">
+                <p className="text-xs uppercase tracking-[0.3em]">Thank You</p>
+              </div>
+          </Cover>
+
+          {/* --- BACK COVER (Left when closed) --- */}
+          <Cover isCover>
+       <div className="h-full flex flex-col items-center justify-center">
+           <div className="w-16 h-16 bg-[#fbbf24] rounded-full flex items-center justify-center mb-6 text-[#1e1b4b]">
+               <span className="text-2xl font-bold font-serif">R</span>
+           </div>
+           
+           <a 
+             href={resumeBookData.cvLink || '#'}
+             target="_blank"
+             rel="noopener noreferrer"
+             className="group flex items-center gap-3 px-6 py-3 border border-[#fbbf24] rounded-full text-[#fbbf24] hover:bg-[#fbbf24] hover:text-[#1e1b4b] transition-all font-serif tracking-widest text-sm uppercase"
+           >
+              Download CV
+              <Download className="w-4 h-4 group-hover:animate-bounce" />
+           </a>
+       </div>
+    </Cover>
 
         </HTMLFlipBook>
       </div>

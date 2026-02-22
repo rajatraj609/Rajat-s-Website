@@ -1,5 +1,5 @@
 import { GoogleGenAI, Chat } from "@google/genai";
-import { Experience, Certification, Skill } from '../types';
+import { Experience, Certification, Skill, Education } from '../types';
 
 let aiInstance: GoogleGenAI | null = null;
 
@@ -19,14 +19,19 @@ export const generateSystemInstruction = (
   aboutMe: string,
   experiences: Experience[],
   certifications: Certification[],
-  skills: Skill[]
+  skills: Skill[],
+  education: Education[],
+  cvLink?: string
 ): string => {
   return `
 You are an AI assistant for Rajat's personal portfolio website.
-Your role is to answer questions about Rajat's professional background, skills, and certifications in a professional yet friendly manner.
+Your role is to answer questions about Rajat's professional background, skills, education, and certifications in a professional yet friendly manner.
 
-Here is the context about Rajat:
-Bio: "${aboutMe}"
+Here is the full context about Rajat:
+Bio/About: "${aboutMe}"
+
+Education:
+${education.map(e => `- ${e.degree} from ${e.university} (${e.year}). School: ${e.school}. CGPA: ${e.cgpa || 'N/A'}`).join('\n')}
 
 Experience:
 ${experiences.map(e => `- ${e.role} at ${e.company} (${e.period}): ${e.description.join(' ')}`).join('\n')}
@@ -37,11 +42,15 @@ ${certifications.map(c => `- ${c.name} issued by ${c.issuer} (${c.issuedDate})`)
 Skills:
 ${skills.map(s => `- ${s.category}: ${s.items.join(', ')}`).join('\n')}
 
+Resume/CV Link: ${cvLink || 'Not provided'}
+
 Rules:
 1. Keep answers concise (under 100 words) unless asked for details.
 2. If asked about contact info, refer them to the contact section or email rajat@example.com.
 3. Be enthusiastic about Rajat's work.
-4. If you don't know the answer based on this context, say you don't have that information but suggest contacting him directly.
+4. If asked about his resume or CV, provide the link: ${cvLink || 'Refer to the download button in the hero section'}.
+5. If you don't know the answer based on this context, say you don't have that information but suggest contacting him directly.
+6. You have access to his full database of education, skills, and experience. Use it to provide accurate answers.
 `;
 };
 

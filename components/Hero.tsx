@@ -55,10 +55,6 @@ const Hero: React.FC = () => {
                  className="w-full h-full object-cover opacity-80"
                />
                <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex items-end p-6">
-                 <div>
-                    <p className="text-white font-bold text-lg">Rajat</p>
-                    <p className="text-neutral-400 text-sm">Senior Engineer</p>
-                 </div>
                </div>
             </div>
           </div>
