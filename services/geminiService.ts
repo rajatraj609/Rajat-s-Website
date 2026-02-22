@@ -5,7 +5,11 @@ let aiInstance: GoogleGenAI | null = null;
 
 const getAI = (): GoogleGenAI => {
   if (!aiInstance) {
-    aiInstance = new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error('GEMINI_API_KEY is missing from environment variables.');
+    }
+    aiInstance = new GoogleGenAI({ apiKey: apiKey || '' });
   }
   return aiInstance;
 };

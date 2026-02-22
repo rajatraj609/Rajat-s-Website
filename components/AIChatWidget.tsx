@@ -16,19 +16,19 @@ const AIChatWidget: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Get live data from context
-  const { aboutMe, experiences, projects, skills } = usePortfolio();
+  const { aboutMe, experiences, skills } = usePortfolio();
 
   useEffect(() => {
     if (isOpen && !chatSessionRef.current) {
       try {
-        const instruction = generateSystemInstruction(aboutMe, experiences, projects, skills);
+        const instruction = generateSystemInstruction(aboutMe, experiences, [], skills);
         chatSessionRef.current = createChatSession(instruction);
       } catch (e) {
         console.error("Failed to init chat", e);
         setMessages(prev => [...prev, { role: 'model', text: "Error: API Key missing or invalid." }]);
       }
     }
-  }, [isOpen, aboutMe, experiences, projects, skills]); // Re-init if data changes could be handled more gracefully, but for now simple init is fine.
+  }, [isOpen, aboutMe, experiences, skills]); // Re-init if data changes could be handled more gracefully, but for now simple init is fine.
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
