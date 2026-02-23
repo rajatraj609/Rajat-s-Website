@@ -97,7 +97,7 @@ export const CONTACT_INFO: ContactInfo = {
   emailCollege: 'rajat.college@edu.com',
   phone: '+91 98765 43210',
   location: 'Bangalore, India',
-  github: 'https://github.com',
-  linkedin: 'https://linkedin.com',
-  twitter: 'https://twitter.com'
+  github: 'https://github.com/rajat-raj',
+  linkedin: 'https://www.linkedin.com/in/rajat-raj',
+  twitter: 'https://twitter.com/rajat_raj'
 };

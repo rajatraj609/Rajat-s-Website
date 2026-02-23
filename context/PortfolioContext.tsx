@@ -55,28 +55,38 @@ export const PortfolioProvider: React.FC<{ children: ReactNode }> = ({ children 
         return;
       }
 
-      try {
-        const docRef = doc(db, "resumeData", "portfolio");
-        const docSnap = await getDoc(docRef);
+      // Create a timeout promise to prevent long loading times
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Firebase timeout')), 2500)
+      );
 
-        if (docSnap.exists()) {
-          const c = docSnap.data();
-          if (c.aboutMe) setAboutMe(c.aboutMe);
-          if (c.heroImage) setHeroImage(c.heroImage);
-          if (c.hireStatus) setHireStatus(c.hireStatus);
-          if (c.detailedBio) setDetailedBio(c.detailedBio);
-          if (c.experiences) setExperiences(c.experiences);
-          if (c.education) setEducation(c.education);
-          if (c.certifications) setCertifications(c.certifications);
-          if (c.skills) setSkills(c.skills);
-          if (c.resumeBookData) setResumeBookData(c.resumeBookData);
-          if (c.contactInfo) setContactInfo(c.contactInfo);
-        } else {
-          console.warn('No such document in Firestore!');
-          loadFromLocalStorage();
-        }
+      try {
+        const fetchPromise = (async () => {
+          const docRef = doc(db, "resumeData", "portfolio");
+          const docSnap = await getDoc(docRef);
+
+          if (docSnap.exists()) {
+            const c = docSnap.data();
+            if (c.aboutMe) setAboutMe(c.aboutMe);
+            if (c.heroImage) setHeroImage(c.heroImage);
+            if (c.hireStatus) setHireStatus(c.hireStatus);
+            if (c.detailedBio) setDetailedBio(c.detailedBio);
+            if (c.experiences) setExperiences(c.experiences);
+            if (c.education) setEducation(c.education);
+            if (c.certifications) setCertifications(c.certifications);
+            if (c.skills) setSkills(c.skills);
+            if (c.resumeBookData) setResumeBookData(c.resumeBookData);
+            if (c.contactInfo) setContactInfo(c.contactInfo);
+          } else {
+            console.warn('No such document in Firestore!');
+            loadFromLocalStorage();
+          }
+        })();
+
+        // Race the fetch against the timeout
+        await Promise.race([fetchPromise, timeoutPromise]);
       } catch (err) {
-        console.error('Error fetching from Firebase:', err);
+        console.error('Error fetching data (falling back to local):', err);
         loadFromLocalStorage();
       } finally {
         setIsLoading(false);

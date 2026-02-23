@@ -108,11 +108,16 @@ const Hero: React.FC = () => {
                 </div>
 
                 <div className="pt-6 border-t border-neutral-800 flex justify-center gap-6">
-                   {contactInfo.linkedin && (
-                     <a href={contactInfo.linkedin} target="_blank" rel="noopener noreferrer" className="p-2 bg-neutral-900 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-all">
-                       <Linkedin className="w-5 h-5" />
-                     </a>
-                   )}
+                    {contactInfo.linkedin && contactInfo.linkedin !== '#' && (
+                      <a 
+                        href={contactInfo.linkedin.startsWith('http') ? contactInfo.linkedin : `https://${contactInfo.linkedin}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="p-2 bg-neutral-900 rounded-full hover:bg-neutral-800 text-neutral-400 hover:text-white transition-all"
+                      >
+                        <Linkedin className="w-5 h-5" />
+                      </a>
+                    )}
                 </div>
              </div>
           </div>

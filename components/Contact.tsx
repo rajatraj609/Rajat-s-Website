@@ -25,8 +25,13 @@ const Contact: React.FC<ContactProps> = ({ onAdminClick }) => {
         </a>
 
         <div className="flex justify-center gap-8">
-           {contactInfo.linkedin && (
-              <a href={contactInfo.linkedin} target="_blank" rel="noopener noreferrer" className="text-neutral-500 hover:text-white transition-colors transform hover:-translate-y-1">
+           {contactInfo.linkedin && contactInfo.linkedin !== '#' && (
+              <a 
+                href={contactInfo.linkedin.startsWith('http') ? contactInfo.linkedin : `https://${contactInfo.linkedin}`} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="text-neutral-500 hover:text-white transition-colors transform hover:-translate-y-1"
+              >
                 <Linkedin className="w-5 h-5" />
               </a>
            )}
